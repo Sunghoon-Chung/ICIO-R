@@ -72,24 +72,18 @@ for(yr in period) {
       LeonInv <- solve(Leon)                                # LeonInv = Leontief Inverse
 
       FD <- zeros(SN, N.np)                                 # FD = Final Demand Matrix for N countries
-      FD.d <- zeros(SN, N.np)
       dimnames(FD) <- list(ciid, cid.np)
-      cnum <- 0                                                # cnum = initial row # in each country
       for(i in 1:N.np) {
-            nind <- table(substr(id[1,],1,3))[cid.np[i]]       # Number of Industries (including PT) in Country i
-            if (i<N.np) {
-                  FD[, i] <- icio[1:SN, (SN+1+6*(i-1)):(SN+6*i)] %*% ones(6,1)
-            } else {
-                  FD[, i] <- icio[1:SN, (SN+1+6*(i-1)):((SN+6*i)+1)] %*% ones(7,1) 
-            }
-            FD.d[(cnum+1):(cnum+nind), i] <- FD[(cnum+1):(cnum+nind), i]
-            cnum <- cnum+nind
+            FD[, i] <- icio[1:SN, (SN+1+6*(i-1)):(SN+6*i)] %*% ones(6,1)
       }
-      FD.f <- FD - FD.d
-      dimnames(FD.f) <- list(ciid, cid.np)
+      FD[, N.np] <- FD[, N.np] + icio[1:SN, ncol(icio)]
       
       
       # FDD = Partial diagonalization of Final Demand with Processing Trade
+      MX <- M                                                  # MX = Intermediate good Export Matrix
+      dimnames(MX) <- list(ciid,ciid)
+      FX <- FD                                                 # FX = Final good Export Matrix
+      dimnames(FX) <- list(ciid,cid.np)
       cnum <- 0                                                # cnum = initial row # in each country
       for (i in 1:N.np) {                                      # i indicates ith country
             nind <- table(substr(id[1,],1,3))[cid.np[i]]       # Number of Industries (including PT) in Country i
@@ -99,10 +93,12 @@ for(yr in period) {
             }
             FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)
             if (i==1) FDD <- FDD.i else FDD <- rbind(FDD, FDD.i)
+            MX[(cnum+1):(cnum+nind),(cnum+1):(cnum+nind)] <- 0 # Calculating MX
+            FX[(cnum+1):(cnum+nind), i] <- 0                   # Calculating FX
             cnum <- cnum+nind
       }
-      dimnames(FDD) <- list(ciid, ciid.np)       
-
+      dimnames(FDD) <- list(ciid, ciid.np)
+      
       
       Y.alloc <- LeonInv %*% FDD                            # Y.alloc = Output Allocation Matrix
       dimnames(Y.alloc) <- list(ciid, ciid.np)
@@ -122,9 +118,14 @@ for(yr in period) {
       VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
       dimnames(VAS) <- list(ciid, ciid.np)
 
+      MX <- M - eye()
+      dimnames(MX) <- list(ciid,ciid)
+      
+      
       
       # Save objects
       save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,Y.alloc,VA.alloc,OS,VAS, 
            file=paste0("ICIO_matrix_",yr,".RData"))
 }
+
 
