@@ -1,9 +1,11 @@
 
 
 ## 2015-07-08
-rm(list = ls())    # Remove all
-setwd("D:/Copy/GVC/ICIO/R")
-rawd <- "D:/Copy/GVC/ICIO/"    # Raw data Directory
+
+rm(list = ls())                        # Remove all
+setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
+rawd  <- "D:/Copy/GVC/ICIO/"           # Excel Raw data Directory
+rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
 library(foreign)
 library(matlab)
@@ -11,11 +13,11 @@ library(xlsx)
 
 
 ## ICIO includes 62 countries (plus 5 processing ID) with 34 industries over 1995-2011
-period <- c(1995,2000,2005,2008,2011)
+period <- c(1995,2000,2005,2008,2009,2010,2011)
 
 
 ## Import data from ICIO and assign IDs
-icio <- read.csv(paste0(rawd,"OECD_ICIO_June2015_2011.csv"))
+icio <- read.csv(paste0(rawd,"OECD_ICIO_2011.csv"))
 SN   <- dim(icio)[1]-2
 ciid <- as.character(icio$X[1:SN])
 id   <- sapply(strsplit(as.character(icio$X[1:SN]), "[_]"), unique)
@@ -29,7 +31,7 @@ N.np <- length(cid.np)
 S <- length(iid)
 ciid.np <- paste0(rep(cid.np, each=S),"_",iid)
 
-save(cid, iid, ciid, SN, file="icio_meta.Rdata")
+save(cid, iid, ciid, SN, file=paste0(rdata,"ICIO_meta.RData"))
 #writeMat(icio_meta.mat, cid=cid, iid=iid, ciid=ciid, SN=SN)
 
 
@@ -46,7 +48,7 @@ fdd_i <- function(fd, mat) {
 ## Compute the values for defined matrices
 
 for(yr in period) {
-      icio <- read.csv(paste0(rawd,"OECD_ICIO_June2015_",yr,".csv"))
+      icio <- read.csv(paste0(rawd,"OECD_ICIO_",yr,".csv"))
       icio <- data.matrix(icio[,2:size(icio)[2]])
       
       y <- icio[nrow(icio), 1:SN]                           # y = World Output Vector
@@ -98,34 +100,37 @@ for(yr in period) {
             cnum <- cnum+nind
       }
       dimnames(FDD) <- list(ciid, ciid.np)
-      
-      
-      Y.alloc <- LeonInv %*% FDD                            # Y.alloc = Output Allocation Matrix
-      dimnames(Y.alloc) <- list(ciid, ciid.np)
-      
-      VA.alloc <- diag(r) %*% Y.alloc                       # VA.alloc = Value-added Allocation Matrix
-      dimnames(VA.alloc) <- list(ciid, ciid.np)
-      
-      yInv <- zeros(SN,1)
-      names(yInv) <- ciid
-      yInv[ciid.nzero] <- 1/y.nzero
-      OS <- diag(yInv) %*% Y.alloc                          # OS = Output Share Matrix
-      dimnames(OS) <- list(ciid, ciid.np)
-      
-      vaInv <- zeros(SN,1)
-      names(vaInv) <- ciid
-      vaInv[ciid.nzero] <- 1/va.nzero
-      VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
-      dimnames(VAS) <- list(ciid, ciid.np)
 
-      EX <- colSums(MX, FX)                                 # Total Export by ciid
-      MXS <- MX/EX                                          # Intermediate Export Share by ciid
-      FXS <- FX/EX                                          # Final Export Share by ciid
-      
-      
+
       # Save objects
       save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,MX,FX, 
-           file=paste0("ICIO_matrix_",yr,".RData"))
+           file=paste0(rdata,"ICIO_matrix_",yr,".RData"))
+
 }
 
+
+
+## Additional Matrices for Analysis
+# 
+# Y.alloc <- LeonInv %*% FDD                            # Y.alloc = Output Allocation Matrix
+# dimnames(Y.alloc) <- list(ciid, ciid.np)
+# 
+# VA.alloc <- diag(r) %*% Y.alloc                       # VA.alloc = Value-added Allocation Matrix
+# dimnames(VA.alloc) <- list(ciid, ciid.np)
+# 
+# yInv <- zeros(SN,1)
+# names(yInv) <- ciid
+# yInv[ciid.nzero] <- 1/y.nzero
+# OS <- diag(yInv) %*% Y.alloc                          # OS = Output Share Matrix
+# dimnames(OS) <- list(ciid, ciid.np)
+# 
+# vaInv <- zeros(SN,1)
+# names(vaInv) <- ciid
+# vaInv[ciid.nzero] <- 1/va.nzero
+# VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
+# dimnames(VAS) <- list(ciid, ciid.np)
+# 
+# EX <- colSums(MX, FX)                                 # Total Export by ciid
+# MXS <- MX/EX                                          # Intermediate Export Share by ciid
+# FXS <- FX/EX                                          # Final Export Share by ciid
 
