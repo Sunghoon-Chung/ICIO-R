@@ -11,7 +11,7 @@ library(xlsx)
 
 
 ## ICIO includes 62 countries (plus 5 processing ID) with 34 industries over 1995-2011
-period <- c(2011)
+period <- c(1995,2000,2005,2008,2011)
 
 
 ## Import data from ICIO and assign IDs
@@ -78,8 +78,7 @@ for(yr in period) {
       }
       FD[, N.np] <- FD[, N.np] + icio[1:SN, ncol(icio)]
       
-      
-      # FDD = Partial diagonalization of Final Demand with Processing Trade
+
       MX <- M                                                  # MX = Intermediate good Export Matrix
       dimnames(MX) <- list(ciid,ciid)
       FX <- FD                                                 # FX = Final good Export Matrix
@@ -91,7 +90,8 @@ for(yr in period) {
                   rnum <- table(id[2,(cnum+1):(cnum+nind)])[j] # rnum = Number of repetition of row
                   if (j==1) mat<-t(eye(S)[j,])%x%ones(rnum,1) else mat<-rbind(mat,t(eye(S)[j,])%x%ones(rnum,1))
             }
-            FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)
+            FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)     # FDD = Partial diagonalization of Final Demand
+
             if (i==1) FDD <- FDD.i else FDD <- rbind(FDD, FDD.i)
             MX[(cnum+1):(cnum+nind),(cnum+1):(cnum+nind)] <- 0 # Calculating MX
             FX[(cnum+1):(cnum+nind), i] <- 0                   # Calculating FX
@@ -118,13 +118,13 @@ for(yr in period) {
       VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
       dimnames(VAS) <- list(ciid, ciid.np)
 
-      MX <- M - eye()
-      dimnames(MX) <- list(ciid,ciid)
-      
+      EX <- colSums(MX, FX)                                 # Total Export by ciid
+      MXS <- MX/EX                                          # Intermediate Export Share by ciid
+      FXS <- FX/EX                                          # Final Export Share by ciid
       
       
       # Save objects
-      save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,Y.alloc,VA.alloc,OS,VAS, 
+      save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,MX,FX, 
            file=paste0("ICIO_matrix_",yr,".RData"))
 }
 
