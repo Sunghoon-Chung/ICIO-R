@@ -1,10 +1,10 @@
 
 
-## 2015-07-08
+## 2015-07-18
 
 rm(list = ls())                        # Remove all
 setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
-rawd  <- "D:/Copy/GVC/ICIO/"           # Excel Raw data Directory
+excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
 rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
 library(foreign)
@@ -13,11 +13,11 @@ library(xlsx)
 
 
 ## ICIO includes 62 countries (plus 5 processing ID) with 34 industries over 1995-2011
-period <- c(1995,2000,2005,2008,2009,2010,2011)
+period <- c(1995,2000,2005,2008,2010,2011)
 
 
 ## Import data from ICIO and assign IDs
-icio <- read.csv(paste0(rawd,"OECD_ICIO_2011.csv"))
+icio <- read.csv(paste0(excel,"OECD_ICIO_2011.csv"))
 SN   <- dim(icio)[1]-2
 ciid <- as.character(icio$X[1:SN])
 id   <- sapply(strsplit(as.character(icio$X[1:SN]), "[_]"), unique)
@@ -48,7 +48,7 @@ fdd_i <- function(fd, mat) {
 ## Compute the values for defined matrices
 
 for(yr in period) {
-      icio <- read.csv(paste0(rawd,"OECD_ICIO_",yr,".csv"))
+      icio <- read.csv(paste0(excel,"OECD_ICIO_",yr,".csv"))
       icio <- data.matrix(icio[,2:size(icio)[2]])
       
       y <- icio[nrow(icio), 1:SN]                           # y = World Output Vector
@@ -74,7 +74,7 @@ for(yr in period) {
       LeonInv <- solve(Leon)                                # LeonInv = Leontief Inverse
 
       FD <- zeros(SN, N.np)                                 # FD = Final Demand Matrix for N countries
-      dimnames(FD) <- list(ciid, cid.np)
+      dimnames(FD) <- list(ciid, paste0("FD_",cid.np))
       for(i in 1:N.np) {
             FD[, i] <- icio[1:SN, (SN+1+6*(i-1)):(SN+6*i)] %*% ones(6,1)
       }
@@ -103,8 +103,8 @@ for(yr in period) {
 
 
       # Save objects
-      save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,MX,FX, 
-           file=paste0(rdata,"ICIO_matrix_",yr,".RData"))
+      save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.nzero,ciid.np,M,A,y,y.nzero,va,va.nzero,
+           r,LeonInv,FD,FDD,MX,FX, file=paste0(rdata,"ICIO_matrix_",yr,".RData"))
 
 }
 
@@ -130,7 +130,7 @@ for(yr in period) {
 # VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
 # dimnames(VAS) <- list(ciid, ciid.np)
 # 
-# EX <- colSums(MX, FX)                                 # Total Export by ciid
+# EX <- rowSums(MX, FX)                                 # Total Export by ciid
 # MXS <- MX/EX                                          # Intermediate Export Share by ciid
 # FXS <- FX/EX                                          # Final Export Share by ciid
 
