@@ -1,6 +1,6 @@
 
 
-## 2015-07-19
+## 2015-10-30
 
 rm(list = ls())                        # Remove all
 setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
@@ -89,5 +89,5 @@ for (i in c("nondura","dura","service")) {
 }
 
 
-write.xlsx(kor.all, paste0(excel,"China_FD_growth_effect.xlsx"))
+write.xlsx2(kor.all, paste0(excel,"China_FD_growth_effect.xlsx", sheetName="FD_growth"))
 
