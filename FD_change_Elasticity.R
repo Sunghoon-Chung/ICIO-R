@@ -15,12 +15,11 @@ library(xlsx)
 chn <- c(1293:1326)
 kor <- c(613:646)
 jpn <- c(579:612)
-FD.g.chn <- zeros(2108,1)
+FD.g.chn <- zeros(2108,1)                             # Final Demand Growth in China
 
-#Set-up
+#Set-up: Broad Sector Classification
 nondura <- zeros(34,1)
-nondura[1:9] <- 1
-nondura[18] <- 1
+nondura[c(1:9,18)] <- 1
 
 dura <- zeros(34,1)
 dura[10:17] <- 1
@@ -29,7 +28,7 @@ service <- zeros(34,1)
 service[19:34] <- 1
 
 
-load(paste0(rdata,"ICIO_matrix_2011.RData"))
+load(paste0(rdata,"ICIO_matrix_2011.RData"))          # ICIO_matrix_2011.RData includes all necessary data for analysis
 
 
 Y.alloc <- LeonInv %*% FDD                            # Y.alloc = Output Allocation Matrix
@@ -38,7 +37,7 @@ dimnames(Y.alloc) <- list(ciid, ciid.np)              # FDD = Final Demand Diago
 yInv <- zeros(SN,1)
 names(yInv) <- ciid
 yInv[ciid.nzero] <- 1/y.nzero
-OS <- diag(yInv) %*% Y.alloc                          # OS = Output Share Matrix
+OS <- diag(yInv) %*% Y.alloc                          # OS = Output Share Matrix (S matrix in Bems et al. 2010)
 dimnames(OS) <- list(ciid, ciid.np)
 
 VA.alloc <- diag(r) %*% Y.alloc                       # VA.alloc = Value-added Allocation Matrix
@@ -54,8 +53,11 @@ dimnames(VAS) <- list(ciid, ciid.np)
 EX <- rowSums(MX, FX)                                 # Total Export by ciid
 MXS <- MX/EX                                          # Intermediate Export Share by ciid
 FXS <- FX/EX                                          # Final Export Share by ciid
-#ex.growth <- MXS %*% y.growth + FXS %*% fd.growth     # ex.growth = Export growth
+#ex.growth <- MXS %*% y.growth + FXS %*% fd.growth    # ex.growth = Export growth
 
+
+
+## Elasticity by Broad Sectors
 
 for (i in c("nondura","dura","service")) {
       
@@ -70,24 +72,24 @@ for (i in c("nondura","dura","service")) {
       }
 
       # Output growth
-      y.growth <- OS %*% FD.g.chn                           # y.growth = Output growth
-      y.growth.kor <- y.growth[kor]
+      y.growth <- OS %*% FD.g.chn                           # y.growth = Sector-level Output growth
+      y.growth.kor <- y.growth[kor]                         # y.growth.kor = Sector-level Output growth in Korea
       names(y.growth.kor) <- iid
-      y.growth.kor.agg <- sum((y[kor]/sum(y[kor]))*y.growth.kor)
+      y.growth.kor.agg <- sum((y[kor]/sum(y[kor]))*y.growth.kor) # Aggregate output growth = weighted avg of sector-level growth
 
       # VA growth
       va.growth <- VAS %*% FD.g.chn                         # va.growth = VA growth
-      va.growth.kor <- va.growth[kor]
+      va.growth.kor <- va.growth[kor]                       # va.growth.kor = VA growth in Korea
       names(va.growth.kor) <- iid
 
+      # Stack by Column
       if (i=="nondura") {
-            kor.all <- c(y.growth.kor,y.growth.kor.agg)
+            kor.all <- c(y.growth.kor, y.growth.kor.agg)
       }
       else {
             kor.all <- cbind(kor.all, c(y.growth.kor,y.growth.kor.agg))
       }
 }
 
-
-write.xlsx2(kor.all, paste0(excel,"China_FD_growth_effect.xlsx", sheetName="FD_growth"))
+write.xlsx2(kor.all, paste0(excel,"China_FD_growth_effect.xlsx", sheetName="Output Elasticity"))
 
