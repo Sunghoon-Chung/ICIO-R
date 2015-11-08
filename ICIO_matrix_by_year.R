@@ -1,7 +1,5 @@
 
 
-## 2015-07-18
-
 rm(list = ls())                        # Remove all
 setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
 excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
@@ -9,7 +7,6 @@ rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
 library(foreign)
 library(matlab)
-library(xlsx)
 
 
 ## ICIO includes 62 countries (plus 5 processing ID) with 34 industries over 1995-2011
@@ -26,9 +23,10 @@ cid  <- unique(id[1,])
 iid  <- unique(id[2,])
 
 cid.np  <- unique(substr(cid,1,3))
-N <- length(cid)
-N.np <- length(cid.np)
-S <- length(iid)
+N       <- length(cid)
+N.np    <- length(cid.np)
+S       <- length(iid)
+SN.np   <- S*N.np
 ciid.np <- paste0(rep(cid.np, each=S),"_",iid)
 
 save(cid, iid, ciid, SN, file=paste0(rdata,"ICIO_meta.RData"))
@@ -80,34 +78,36 @@ for(yr in period) {
       }
       FD[, N.np] <- FD[, N.np] + icio[1:SN, ncol(icio)]
       
-
-      MX <- M                                                  # MX = Intermediate good Export Matrix
+      # Generating FDD (Final Demand Diagonalized) matrix
+      MX <- M                                                     # MX = Intermediate good Export Matrix
       dimnames(MX) <- list(ciid,ciid)
-      FX <- FD                                                 # FX = Final good Export Matrix
+      FX <- FD                                                    # FX = Final good Export Matrix
       dimnames(FX) <- list(ciid,cid.np)
-      cnum <- 0                                                # cnum = initial row # in each country
-      for (i in 1:N.np) {                                      # i indicates ith country
-            nind <- table(substr(id[1,],1,3))[cid.np[i]]       # Number of Industries (including PT) in Country i
+      cnum <- 0                                                   # cnum = initial row # in each country
+      for (i in 1:N.np) {                                         # i indicates ith country
+            nind <- table(substr(id[1,],1,3))[cid.np[i]]          # Number of Industries (including PT) in Country i
             for (j in 1:S) {
-                  rnum <- table(id[2,(cnum+1):(cnum+nind)])[j] # rnum = Number of repetition of row
+                  rnum <- table(id[2,(cnum+1):(cnum+nind)])[j]    # rnum = Number of repetition of row
                   if (j==1) mat<-t(eye(S)[j,])%x%ones(rnum,1) else mat<-rbind(mat,t(eye(S)[j,])%x%ones(rnum,1))
             }
-            FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)     # FDD = Partial diagonalization of Final Demand
-
+            FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)        # FDD = Partial diagonalization of Final Demand
             if (i==1) FDD <- FDD.i else FDD <- rbind(FDD, FDD.i)
-            MX[(cnum+1):(cnum+nind),(cnum+1):(cnum+nind)] <- 0 # Calculating MX
-            FX[(cnum+1):(cnum+nind), i] <- 0                   # Calculating FX
+
+            IDD.i <- fdd_i(ones(length((cnum+1):(cnum+nind)), N.np), mat) 
+            if (i==1) IDD <- IDD.i else IDD <- rbind(IDD, IDD.i)  # IDD = Partial diagonalized Identity Matrix (for later use)
+            
+            MX[(cnum+1):(cnum+nind),(cnum+1):(cnum+nind)] <- 0    # Calculating MX
+            FX[(cnum+1):(cnum+nind), i] <- 0                      # Calculating FX
             cnum <- cnum+nind
       }
       dimnames(FDD) <- list(ciid, ciid.np)
-
+      dimnames(IDD) <- list(ciid, ciid.np)
 
       # Save objects
-      save(icio,S,N,N.np,SN,id,cid,cid.np,iid,ciid,ciid.nzero,ciid.np,M,A,y,y.nzero,va,va.nzero,
-           r,LeonInv,FD,FDD,MX,FX, file=paste0(rdata,"ICIO_matrix_",yr,".RData"))
+      save(icio,S,N,N.np,SN,SN.np,id,cid,cid.np,iid,ciid,ciid.nzero,ciid.np,M,A,y,y.nzero,va,va.nzero,
+           r,LeonInv,FD,FDD,IDD,MX,FX, file=paste0(rdata,"ICIO_matrix_",yr,".RData"))
 
 }
-
 
 
 ## Additional Matrices for Analysis
@@ -130,7 +130,7 @@ for(yr in period) {
 # VAS <- diag(vaInv) %*% VA.alloc                       # VAS = Value-added Share Matrix
 # dimnames(VAS) <- list(ciid, ciid.np)
 # 
-# EX <- rowSums(MX, FX)                                 # Total Export by ciid
+# EX <- rowSums(MX) + rowSums(FX)                       # Total Export by ciid
 # MXS <- MX/EX                                          # Intermediate Export Share by ciid
 # FXS <- FX/EX                                          # Final Export Share by ciid
 
