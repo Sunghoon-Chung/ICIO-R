@@ -36,9 +36,11 @@ ndura <- zeros(34,1)    # nondurable
 ndura[c(1:9,18)] <- 1   # 1 = 1% change x 100. Hence, elasticities should be directly read in percentage term.
 dura <- zeros(34,1)     # durable
 dura[10:17] <- 1
+nmip <- zeros(34,1)     # Non-Manufacturing Industrial Production = Utilities & Construction
+nmip[19:20] <- 1 
 svc <- zeros(34,1)      # service
-svc[19:34] <- 1
-sectors <- c("ndura","dura","svc")
+svc[21:34] <- 1
+sectors <- c("ndura","dura","nmip","svc")
 
 
 # Prepare an Excel file to save results
@@ -147,18 +149,18 @@ for (i in cty.src) {         # Impact by source countries
       eps.va.all <- as.data.frame(eps.va)
       eps.ex.all <- as.data.frame(eps.ex) 
       
-      dimnames(eps.y.all)  <- list(c(iid, "AGG.Economy"), paste("y", rep(cty.resp, each=3), sectors, sep="_"))
-      dimnames(eps.va.all) <- list(c(iid, "AGG.Economy"), paste("va", rep(cty.resp, each=3), sectors, sep="_"))
-      dimnames(eps.ex.all) <- list(c(iid, "AGG.Economy"), paste("ex", rep(cty.resp, each=3), sectors, sep="_"))
+      dimnames(eps.y.all)  <- list(c(iid, "AGG.Economy"), paste("y", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
+      dimnames(eps.va.all) <- list(c(iid, "AGG.Economy"), paste("va", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
+      dimnames(eps.ex.all) <- list(c(iid, "AGG.Economy"), paste("ex", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
 
       
       # Save to the xlsx file 
       for (k in c("y", "va", "ex")) {
             
-            addWorksheet(wb, paste("e",k,i,sep="_"))
+            addWorksheet(wb, paste("e", k, i, sep="_"))
             
-            writeData(wb, paste("e",k,i,sep="_"), 
-                      paste("Elasticity of",k,"w.r.t. Final Demand Change in",i,"(Unit: %)", sep=" "))
+            writeData(wb, paste("e", k, i, sep="_"), 
+                      paste("Elasticity of", k, "w.r.t. Final Demand Change in", i, "(Unit: %)", sep=" "))
             
             writeDataTable(wb, paste("e",k,i,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
                            startRow=2, rowNames=TRUE, withFilter=FALSE, tableStyle="TableStyleMedium9")
@@ -166,5 +168,6 @@ for (i in cty.src) {         # Impact by source countries
       
 }
 
-saveWorkbook(wb, paste0(excel,"FD_Elasticity.xlsx"))
+saveWorkbook(wb, paste0(excel,"FD_Elasticity.xlsx"), overwrite=TRUE)
 
+ 
