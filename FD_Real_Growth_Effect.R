@@ -11,8 +11,7 @@ library(openxlsx)
 
 
 # Prepare an excel file
-
-note <- c("This file calculates the elasticities of output (y), value added (va) and export (ex) due to the real FD change in China & USA.", "All units are in percentage term.")
+note <- c("This file calculates the real growth of output (y), value added (va) and export (ex) due to the real FD change in China & USA.", "All units are in percentage term.")
 
 wb <- createWorkbook()
 addWorksheet(wb, "Note")
@@ -22,13 +21,29 @@ writeData(wb, "Note", note)
 
 ### Set-up ###
 
-# Load file
-load(paste0(rdata,"ICIO_matrix_2011.RData"))          # ICIO_matrix_2011.RData includes all necessary data for analysis
+# Load file and Import excel data
+load(paste0(rdata,"ICIO_matrix_2011.RData"))        # ICIO_matrix_2011.RData includes all necessary data for analysis
 rm(icio)
+FDhat.iid <- read.xlsx(paste0(excel,"FD_2012-2015_estimation.xlsx"), sheet="R_export", startRow=2)
+FDhat3.CHN <- FDhat.iid[,"fdhat3.CHN"]
+FDhat3.CHN.dnd <- FDhat.iid[,"fdhat3.CHN.dnd"]
+
+
+# Sector Classification: nonondurable, durable, utilies & construction, service
+ndura <- zeros(34,1)    # nondurable
+ndura[c(1:9,18)] <- FDhat3.CHN[c(1:9,18)]
+dura <- zeros(34,1)     # durable
+dura[10:17] <- FDhat3.CHN[c(10:17)]
+ucon <- zeros(34,1)     # Utilities & Construction
+ucon[19:20] <- FDhat3.CHN[c(19,20)]
+svc <- zeros(34,1)      # service
+svc[21:34] <- FDhat3.CHN[c(21:34)]
+all <- FDhat3.CHN       # All Industries
+sectors <- c("ndura","dura","ucon","svc","all")
 
 
 # Source Country of Shocks and Responding Countries
-cty.src  <- c("CHN","USA")                          # Source countries          
+cty.src  <- c("CHN")                                # Source countries: add USA          
 cty.resp <- c("KOR","CHN","DEU","JPN","TWN","USA")  # Responding countries
 
 
@@ -43,23 +58,6 @@ JPN <- as.numeric(names(subset(cty, cty=="JPN")))
 TWN <- as.numeric(names(subset(cty, cty=="TWN")))
 USA <- as.numeric(names(subset(cty, cty=="USA")))
 
-
-# Broad Sector Classification: nonondurable, durable, utilies & construction, service
-ndura <- zeros(34,1)    # nondurable
-ndura[c(1:9,18)] <- 1   # 1 = 1% change x 100. Hence, elasticities should be directly read in percentage term.
-dura <- zeros(34,1)     # durable
-dura[10:17] <- 1
-ucon <- zeros(34,1)     # Utilities & Construction
-ucon[19:20] <- 1 
-svc <- zeros(34,1)      # service
-svc[21:34] <- 1
-sectors <- c("ndura","dura","ucon","svc")
-
-
-# Prepare an Excel file to save results
-library(openxlsx)
-wb <- createWorkbook()
-addWorksheet(wb, "Note")
 
 
 # Obtain Output & Value-added Share Matrix
@@ -125,15 +123,15 @@ for (i in cty.src) {         # Impact by source countries
       eps.im <- vector(mode="list")
       
       for (s in sectors) {
-      
+            
             FD.growth <- zeros(SN.np,1)                            # Final Demand Growth vector
             FD.growth[eval(as.name(i))] <- eval(as.name(s))
-      
+            
             # Country-by-Sector level Growth Rate
             yhat  <- OS  %*% FD.growth                             # yhat  (SNx1) = Output growth by ciid
             vahat <- VAS %*% FD.growth                             # vahat (SNx1) = VA growth by ciid
             exhat <- MXS %*% yhat + FXS %*% FD.growth              # exhat (SNx1) = Export growth by ciid
-
+            
             
             # Obtain Aggregate Growth Rates
             for (j in cty.resp) {
@@ -149,7 +147,7 @@ for (i in cty.src) {         # Impact by source countries
                   
                   exhat.j     <- exhat[jj]                         # exhat.j = Sector-level Output growth in country j
                   exhat.j.agg <- sum((ex[jj]/sum(ex[jj]))*exhat.j)
-      
+                  
                   # Stack by Column
                   eps.y[[j]]  <- cbind(eps.y[[j]],  c(yhat.j,yhat.j.agg))   # eps.y  = elasticity of Output for country j
                   eps.va[[j]] <- cbind(eps.va[[j]], c(vahat.j,vahat.j.agg)) # eps.va = elasticity of VA for country j
@@ -162,26 +160,25 @@ for (i in cty.src) {         # Impact by source countries
       eps.va.all <- as.data.frame(eps.va)
       eps.ex.all <- as.data.frame(eps.ex) 
       
-      dimnames(eps.y.all)  <- list(c(iid, "AGG.Economy"), paste("y", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
-      dimnames(eps.va.all) <- list(c(iid, "AGG.Economy"), paste("va", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
-      dimnames(eps.ex.all) <- list(c(iid, "AGG.Economy"), paste("ex", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
-
+      dimnames(eps.y.all)  <- list(c(iid,"AGG.Economy"), paste("y", rep(cty.resp, each=length(sectors)),sectors, sep="_"))
+      dimnames(eps.va.all) <- list(c(iid,"AGG.Economy"), paste("va",rep(cty.resp, each=length(sectors)),sectors, sep="_"))
+      dimnames(eps.ex.all) <- list(c(iid,"AGG.Economy"), paste("ex",rep(cty.resp, each=length(sectors)),sectors, sep="_"))
+      
       
       # Save to the xlsx file 
-      for (k in c("y", "va", "ex")) {
+      for (k in c("y", "va", "ex")) {     
             
-            addWorksheet(wb, paste("e", k, i, sep="_"))     # k = variable of interest, i = source country of shock
+            addWorksheet(wb, paste("growth", k, i, sep="_"))     # k = variable of interest, i = source country of shock
             
-            writeData(wb, paste("e", k, i, sep="_"), 
-                      paste("Elasticity of", k, "w.r.t. Final Demand Change in", i, "(Unit: %)", sep=" "))
+            writeData(wb, paste("growth", k, i, sep="_"), 
+                      paste("Real Growth of", k, "w.r.t. Actual Final Demand Change in", i, "(Unit: %)", sep=" "))
             
-            writeDataTable(wb, paste("e",k,i,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
+            writeDataTable(wb, paste("growth",k,i,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
                            startRow=2, rowNames=TRUE, withFilter=FALSE, tableStyle="TableStyleMedium9")
       }
       
 }
 
-saveWorkbook(wb, paste0(excel,"FD_Elasticity.xlsx"), overwrite=TRUE)
+saveWorkbook(wb, paste0(excel,"FD_Real_Growth_Effect.xlsx"), overwrite=TRUE)
 
 
- 
