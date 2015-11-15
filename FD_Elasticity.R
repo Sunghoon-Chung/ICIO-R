@@ -10,6 +10,8 @@ library(matlab)
 library(openxlsx)
 
 
+### Set-up ###
+
 # Prepare an excel file
 
 note <- c("This file calculates the elasticities of output (y), value added (va) and export (ex) due to the real FD change in China & USA.", "All units are in percentage term.")
@@ -19,29 +21,13 @@ addWorksheet(wb, "Note")
 writeData(wb, "Note", note)
 
 
-
-### Set-up ###
-
-# Load file
-load(paste0(rdata,"ICIO_matrix_2011.RData"))          # ICIO_matrix_2011.RData includes all necessary data for analysis
-rm(icio)
+# Sample Period
+period <- c(1995,2000,2005,2008,2009,2010,2011)
 
 
 # Source Country of Shocks and Responding Countries
 cty.src  <- c("CHN","USA")                          # Source countries          
 cty.resp <- c("KOR","CHN","DEU","JPN","TWN","USA")  # Responding countries
-
-
-# Country's column position in the ICIO matrix
-cty <- as.matrix(as.data.frame(strsplit(ciid.np,"_"))[1,])
-cty <- as.vector(cty)
-names(cty) <- 1:SN.np
-CHN <- as.numeric(names(subset(cty, cty=="CHN")))
-DEU <- as.numeric(names(subset(cty, cty=="DEU")))
-KOR <- as.numeric(names(subset(cty, cty=="KOR")))
-JPN <- as.numeric(names(subset(cty, cty=="JPN")))
-TWN <- as.numeric(names(subset(cty, cty=="TWN")))
-USA <- as.numeric(names(subset(cty, cty=="USA")))
 
 
 # Broad Sector Classification: nonondurable, durable, utilies & construction, service
@@ -56,10 +42,27 @@ svc[21:34] <- 1
 sectors <- c("ndura","dura","ucon","svc")
 
 
-# Prepare an Excel file to save results
-library(openxlsx)
-wb <- createWorkbook()
-addWorksheet(wb, "Note")
+
+### Run for each year
+
+for (yr in period) {
+      
+# Load file
+load(paste0(rdata,"ICIO_matrix_",yr,".RData"))    # These RData include all necessary data for analysis
+rm(icio)
+
+
+# Country's column position in the ICIO matrix
+cty <- as.matrix(as.data.frame(strsplit(ciid.np,"_"))[1,])
+cty <- as.vector(cty)
+names(cty) <- 1:SN.np
+
+CHN <- as.numeric(names(subset(cty, cty=="CHN")))
+DEU <- as.numeric(names(subset(cty, cty=="DEU")))
+KOR <- as.numeric(names(subset(cty, cty=="KOR")))
+JPN <- as.numeric(names(subset(cty, cty=="JPN")))
+TWN <- as.numeric(names(subset(cty, cty=="TWN")))
+USA <- as.numeric(names(subset(cty, cty=="USA")))
 
 
 # Obtain Output & Value-added Share Matrix
@@ -101,7 +104,7 @@ for (n in c(1:N.np)) {
       FX.n    <- diag(FX[,n]) %*% IDD[,1:S]
       FX.diag <- cbind(FX.diag, FX.n)
 }
-FXS <- FX.diag / ex                                     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
+FXS <- FX.diag / ex           # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
 
 # We only calculate country-level import
 mm.cid   <- colSums(MX) %*% as.matrix(data.frame(cols)) # Intermediate Import by cid
@@ -162,26 +165,26 @@ for (i in cty.src) {         # Impact by source countries
       eps.va.all <- as.data.frame(eps.va)
       eps.ex.all <- as.data.frame(eps.ex) 
       
-      dimnames(eps.y.all)  <- list(c(iid, "AGG.Economy"), paste("y", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
-      dimnames(eps.va.all) <- list(c(iid, "AGG.Economy"), paste("va", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
-      dimnames(eps.ex.all) <- list(c(iid, "AGG.Economy"), paste("ex", rep(cty.resp, each=length(sectors)), sectors, sep="_"))
+      dimnames(eps.y.all)  <- list(c(iid, "AGG.Economy"), paste("y",  rep(cty.resp,each=length(sectors)), sectors, sep="_"))
+      dimnames(eps.va.all) <- list(c(iid, "AGG.Economy"), paste("va", rep(cty.resp,each=length(sectors)), sectors, sep="_"))
+      dimnames(eps.ex.all) <- list(c(iid, "AGG.Economy"), paste("ex", rep(cty.resp,each=length(sectors)), sectors, sep="_"))
 
       
-      # Save to the xlsx file 
+      # Save to the xlsx file
       for (k in c("y", "va", "ex")) {
             
-            addWorksheet(wb, paste("e", k, i, sep="_"))     # k = variable of interest, i = source country of shock
+            addWorksheet(wb, paste("e", k, i, yr, sep="_"))     # k = variable of interest, i = source country of shock
             
-            writeData(wb, paste("e", k, i, sep="_"), 
+            writeData(wb, paste("e", k, i, yr, sep="_"), 
                       paste("Elasticity of", k, "w.r.t. Final Demand Change in", i, "(Unit: %)", sep=" "))
             
-            writeDataTable(wb, paste("e",k,i,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
+            writeDataTable(wb, paste("e",k,i,yr,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
                            startRow=2, rowNames=TRUE, withFilter=FALSE, tableStyle="TableStyleMedium9")
       }
       
 }
 
+}
+
 saveWorkbook(wb, paste0(excel,"FD_Elasticity.xlsx"), overwrite=TRUE)
 
-
- 

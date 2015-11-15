@@ -10,7 +10,7 @@ library(matlab)
 
 
 ## ICIO includes 62 countries (plus 5 processing ID) with 34 industries over 1995-2011
-period <- c(1995,2000,2005,2008,2010,2011)
+period <- c(1995,2000,2005,2008,2009,2010,2011)
 
 
 ## Import data from ICIO and assign IDs
@@ -94,7 +94,7 @@ for(yr in period) {
             if (i==1) FDD <- FDD.i else FDD <- rbind(FDD, FDD.i)
 
             IDD.i <- fdd_i(ones(length((cnum+1):(cnum+nind)), N.np), mat) 
-            if (i==1) IDD <- IDD.i else IDD <- rbind(IDD, IDD.i)  # IDD = Partial diagonalized Identity Matrix (for later use)
+            if (i==1) IDD <- IDD.i else IDD <- rbind(IDD, IDD.i)  # IDD = Partial diagonalized Identity Matrix for later use
             
             MX[(cnum+1):(cnum+nind),(cnum+1):(cnum+nind)] <- 0    # Calculating MX
             FX[(cnum+1):(cnum+nind), i] <- 0                      # Calculating FX

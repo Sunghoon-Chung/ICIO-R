@@ -35,7 +35,7 @@ FD_Growth <- function(base.year, FD.growth) {
             cols[[c]] <- ifelse(substr(id[1,],1,3)==c, 1, 0)
       }
       
-      ex  <- rowSums(MX) + rowSums(FX)                       # Total Export by ciid (MX & FX do not include home trade values)
+      ex  <- rowSums(MX) + rowSums(FX)                       # Total Export by ciid (MX & FX don't include home trade values)
       ex[ex==0] <- 0.01                                      # Set the minimum export equal to 0.01 to avoid zero division
       mx.cid <- rowSums(MX) %*% as.matrix(data.frame(cols))  # Intermediate Export by cid
       fx.cid <- rowSums(FX) %*% as.matrix(data.frame(cols))  # Final Export by cid
@@ -46,7 +46,7 @@ FD_Growth <- function(base.year, FD.growth) {
             FX.n    <- diag(FX[,n]) %*% IDD[,1:S]
             FX.diag <- cbind(FX.diag, FX.n)
       }
-      FXS <- FX.diag / ex                                    # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
+      FXS <- FX.diag / ex                                    # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1)
       exhat <- MXS %*% yhat + FXS %*% FD.growth              # exhat (SNx1) = Export growth by ciid
       
       
