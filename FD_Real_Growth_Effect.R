@@ -1,6 +1,5 @@
 
 
-
 rm(list = ls())                        # Remove all
 setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
 excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
@@ -10,6 +9,9 @@ library(matlab)
 library(openxlsx)
 
 
+
+### Set-up ###
+
 # Prepare an excel file
 note <- c("This file calculates the real growth of output (y), value added (va) and export (ex) due to the real FD change in China & USA.", "All units are in percentage term.")
 
@@ -18,46 +20,42 @@ addWorksheet(wb, "Note")
 writeData(wb, "Note", note)
 
 
+# Sample Period
+period <- c(2011)
 
-### Set-up ###
 
+
+### Run for each year
+
+#for (yr in period) {
+      
 # Load file and Import excel data
-load(paste0(rdata,"ICIO_matrix_2011.RData"))        # ICIO_matrix_2011.RData includes all necessary data for analysis
+load(paste0(rdata,"ICIO_matrix_",2011,".RData"))    # This file includes all necessary data for analysis
 rm(icio)
-FDhat.iid <- read.xlsx(paste0(excel,"FD_2012-2015_estimation.xlsx"), sheet="R_export", startRow=2)
+
+FDhat.iid <- read.xlsx(paste0(excel,"FD_2012-2015_estimation.xlsx"), sheet="R_export_CHN", startRow=3)
 FDhat3.CHN <- FDhat.iid[,"fdhat3.CHN"]
-FDhat3.CHN.dnd <- FDhat.iid[,"fdhat3.CHN.dnd"]
+
+
+# Column positions of Source Country & Responding Countries in ICIO matrix
+cty.src <- which(substr(ciid.np, 1, 3)=="CHN")                            # Source country = China
+cty.rsp <- list("KOR","DEU","JPN","TWN","USA")                            # Responding countries
+names(cty.rsp) <- cty.rsp
+cty.pos <- lapply(cty.rsp, function(cty) which(substr(ciid,1,3)==cty))   # Country's column position list.
 
 
 # Sector Classification: nonondurable, durable, utilies & construction, service
-ndura <- zeros(34,1)    # nondurable
-ndura[c(1:9,18)] <- FDhat3.CHN[c(1:9,18)]
-dura <- zeros(34,1)     # durable
-dura[10:17] <- FDhat3.CHN[c(10:17)]
-ucon <- zeros(34,1)     # Utilities & Construction
-ucon[19:20] <- FDhat3.CHN[c(19,20)]
-svc <- zeros(34,1)      # service
-svc[21:34] <- FDhat3.CHN[c(21:34)]
-all <- FDhat3.CHN       # All Industries
 sectors <- c("ndura","dura","ucon","svc","all")
+FD.scl  <- zeros(S, length(sectors))
+FD.scl[c(1:9,18),1] <- FDhat3.CHN[c(1:9,18)]     # Non-durable
+FD.scl[c(10:17) ,2] <- FDhat3.CHN[c(10:17)]      # Durable
+FD.scl[c(19,20) ,3] <- FDhat3.CHN[c(19,20)]      # Utilities & Construction
+FD.scl[c(21:34) ,4] <- FDhat3.CHN[c(21:34)]      # Service
+FD.scl[,5]          <- FDhat3.CHN                # All Industries
 
-
-# Source Country of Shocks and Responding Countries
-cty.src  <- c("CHN")                                # Source countries: add USA          
-cty.resp <- c("KOR","CHN","DEU","JPN","TWN","USA")  # Responding countries
-
-
-# Country's column position in the ICIO matrix
-cty <- as.matrix(as.data.frame(strsplit(ciid.np,"_"))[1,])
-cty <- as.vector(cty)
-names(cty) <- 1:SN.np
-CHN <- as.numeric(names(subset(cty, cty=="CHN")))
-DEU <- as.numeric(names(subset(cty, cty=="DEU")))
-KOR <- as.numeric(names(subset(cty, cty=="KOR")))
-JPN <- as.numeric(names(subset(cty, cty=="JPN")))
-TWN <- as.numeric(names(subset(cty, cty=="TWN")))
-USA <- as.numeric(names(subset(cty, cty=="USA")))
-
+FD.growth <- as.data.frame(zeros(SN.np, length(sectors)))
+dimnames(FD.growth) <- list(ciid.np, sectors)
+FD.growth[cty.src,] <- FD.scl
 
 
 # Obtain Output & Value-added Share Matrix
@@ -83,7 +81,7 @@ dimnames(VAS) <- list(ciid, ciid.np)
 
 # Obtain Export & Import Share
 
-cols   <- vector(mode = "list")
+cols   <- list()
 for (c in cid.np) {
       cols[[c]] <- ifelse(substr(id[1,],1,3)==c, 1, 0)
 }
@@ -101,83 +99,69 @@ for (n in c(1:N.np)) {
 }
 FXS <- FX.diag / ex                                     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
 
-# We only calculate country-level import
-mm.cid   <- colSums(MX) %*% as.matrix(data.frame(cols)) # Intermediate Import by cid
-im.cid   <- mm.cid + colSums(FX)                        # Total Import by cid
-freq.cid <- table(substr(id[1,],1,3))
-freq.cid <- freq.cid[cid.np]                            # Keep country ordering same as the ICIO table
-IM  <- ones(SN,1) %*% t(rep(im.cid, freq.cid))          # IM = Total Import by cid in Matrix form
-MMS <- MX / IM                                          # Intermediate Import Share
-FMS <- FX / (ones(SN,1) %*% im.cid)                     # Final Import Share
-
 
 
 ### Calculating Elasticity by Broad Sectors & Countries ###
 
-for (i in cty.src) {         # Impact by source countries
+# Country-by-Sector level Growth Rate
+yhat  <- lapply(FD.growth, function(x) OS %*% x)      # yhat (SN by # of sectors) = Output growth by ciid
+vahat <- lapply(FD.growth, function(x) VAS %*% x)     # vahat(SN by # of sectors) = VA growth by ciid
+exhat <- sapply(yhat, function(x) MXS%*%x) + sapply(FD.growth, function(y) FXS%*%y)    # exhat = Export growth by ciid
+
+yhat  <- as.data.frame(yhat)
+vahat <- as.data.frame(vahat)
+exhat <- as.data.frame(exhat)      
+
+yhat.j  <- lapply(cty.rsp, function(j) yhat[cty.pos[[j]],])   # yhat.j  = Sector-level Output growth for each country j
+vahat.j <- lapply(cty.rsp, function(j) vahat[cty.pos[[j]],])  # vahat.j = Sector-level VA growth
+exhat.j <- lapply(cty.rsp, function(j) exhat[cty.pos[[j]],])  # exhat.j = Sector-level Export growth
+
+
+# Obtain Aggregate Growth Rates
+
+eps.y  <- list()        # Elasticity of output
+eps.va <- list()        # Elasticity of VA
+eps.ex <- list()        # Elasticity of export
+
+for (k in 1:length(cty.rsp)) {
+
+      j <- cty.pos[[k]]     # Country j's column position
+
+      # Aggregate Growth Rate = weighted avg of sector-level growth rate
+      yhat.j.agg  <- colSums((y[j]/sum(y[j]))*yhat.j[[k]])
+      vahat.j.agg <- colSums((va[j]/sum(va[j]))*vahat.j[[k]])  
+      exhat.j.agg <- colSums((ex[j]/sum(ex[j]))*exhat.j[[k]])
       
-      # creating an empty lists
-      eps.y  <- vector(mode="list")                           
-      eps.va <- vector(mode="list")
-      eps.ex <- vector(mode="list")
-      eps.im <- vector(mode="list")
-      
-      for (s in sectors) {
-            
-            FD.growth <- zeros(SN.np,1)                            # Final Demand Growth vector
-            FD.growth[eval(as.name(i))] <- eval(as.name(s))
-            
-            # Country-by-Sector level Growth Rate
-            yhat  <- OS  %*% FD.growth                             # yhat  (SNx1) = Output growth by ciid
-            vahat <- VAS %*% FD.growth                             # vahat (SNx1) = VA growth by ciid
-            exhat <- MXS %*% yhat + FXS %*% FD.growth              # exhat (SNx1) = Export growth by ciid
-            
-            
-            # Obtain Aggregate Growth Rates
-            for (j in cty.resp) {
-                  
-                  jj <- eval(as.name(j))                           # Evaluate text as variable name
-                  
-                  # Calculate Aggregate Growth Rate
-                  yhat.j      <- yhat[jj]                          # yhat.j = Sector-level Output growth in country j
-                  yhat.j.agg  <- sum((y[jj]/sum(y[jj]))*yhat.j)    # Aggregate Growth = weighted avg of sector-level growth
-                  
-                  vahat.j     <- vahat[jj]                         # vahat.j = Sector-level VA growth in country j
-                  vahat.j.agg <- sum((va[jj]/sum(va[jj]))*vahat.j)                    
-                  
-                  exhat.j     <- exhat[jj]                         # exhat.j = Sector-level Output growth in country j
-                  exhat.j.agg <- sum((ex[jj]/sum(ex[jj]))*exhat.j)
-                  
-                  # Stack by Column
-                  eps.y[[j]]  <- cbind(eps.y[[j]],  c(yhat.j,yhat.j.agg))   # eps.y  = elasticity of Output for country j
-                  eps.va[[j]] <- cbind(eps.va[[j]], c(vahat.j,vahat.j.agg)) # eps.va = elasticity of VA for country j
-                  eps.ex[[j]] <- cbind(eps.ex[[j]], c(exhat.j,exhat.j.agg)) # eps.ex = elasticity of Export for country j 
-                  
-            }
-      }
-      
-      eps.y.all  <- as.data.frame(eps.y)   # Convert the list to dataframe
-      eps.va.all <- as.data.frame(eps.va)
-      eps.ex.all <- as.data.frame(eps.ex) 
-      
-      dimnames(eps.y.all)  <- list(c(iid,"AGG.Economy"), paste("y", rep(cty.resp, each=length(sectors)),sectors, sep="_"))
-      dimnames(eps.va.all) <- list(c(iid,"AGG.Economy"), paste("va",rep(cty.resp, each=length(sectors)),sectors, sep="_"))
-      dimnames(eps.ex.all) <- list(c(iid,"AGG.Economy"), paste("ex",rep(cty.resp, each=length(sectors)),sectors, sep="_"))
-      
-      
-      # Save to the xlsx file 
-      for (k in c("y", "va", "ex")) {     
-            
-            addWorksheet(wb, paste("growth", k, i, sep="_"))     # k = variable of interest, i = source country of shock
-            
-            writeData(wb, paste("growth", k, i, sep="_"), 
-                      paste("Real Growth of", k, "w.r.t. Actual Final Demand Change in", i, "(Unit: %)", sep=" "))
-            
-            writeDataTable(wb, paste("growth",k,i,sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
-                           startRow=2, rowNames=TRUE, withFilter=FALSE, tableStyle="TableStyleMedium9")
-      }
+      # Stack by Column
+      eps.y[[k]]  <- rbind(yhat.j[[k]],  yhat.j.agg)     # Elasticity of Output for country j
+      eps.va[[k]] <- rbind(vahat.j[[k]], vahat.j.agg)    # Elasticity of VA for country j
+      eps.ex[[k]] <- rbind(exhat.j[[k]], exhat.j.agg)    # Elasticity of Export for country j 
       
 }
+
+
+# Convert the list to dataframe
+eps.y.all  <- as.data.frame(eps.y)   
+eps.va.all <- as.data.frame(eps.va)
+eps.ex.all <- as.data.frame(eps.ex) 
+
+dimnames(eps.y.all)  <- list(c(iid,"AGG.Economy"), paste("y", rep(cty.rsp, each=length(sectors)), sectors, sep="_"))
+dimnames(eps.va.all) <- list(c(iid,"AGG.Economy"), paste("va",rep(cty.rsp, each=length(sectors)), sectors, sep="_"))
+dimnames(eps.ex.all) <- list(c(iid,"AGG.Economy"), paste("ex",rep(cty.rsp, each=length(sectors)), sectors, sep="_"))
+
+
+# Save to the xlsx file 
+for (k in c("y", "va", "ex")) {     
+      
+      addWorksheet(wb, paste("growth",k, sep="_"))     # k = variable of interest, i = source country of shock
+      
+      writeData(wb, paste("growth",k, sep="_"), 
+            paste0("Real Growth of ",k," w.r.t. Actual FD Change in China (Unit: %)"))
+      
+      writeDataTable(wb, paste("growth",k, sep="_"), eval(as.name(paste0("eps.",k,".all"))), 
+            startRow=2, rowNames=TRUE, withFilter=FALSE, tableStyle="TableStyleMedium9")
+}
+
 
 saveWorkbook(wb, paste0(excel,"FD_Real_Growth_Effect.xlsx"), overwrite=TRUE)
 
