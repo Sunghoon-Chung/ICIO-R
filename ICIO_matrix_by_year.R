@@ -29,23 +29,21 @@ S       <- length(iid)
 SN.np   <- S*N.np
 ciid.np <- paste0(rep(cid.np, each=S),"_",iid)
 
-save(cid, iid, ciid, SN, file=paste0(rdata,"ICIO_meta.RData"))
-#writeMat(icio_meta.mat, cid=cid, iid=iid, ciid=ciid, SN=SN)
-
 
 ## Function for generating FDD matrix
-fdd_i <- function(fd, mat) {
-      for (k in 1:dim(fd)[2]) {
-            y <- diag(fd[,k]) %*% mat
+fdd_i <- function(M, mat) {             # Take each column of M, diagonalize it, and then adjust (multiply) by mat      
+      for (k in 1:dim(M)[2]) {           
+            y <- diag(M[,k]) %*% mat    # mat = post (or column) adjust matrix
             if (k==1) z<-y else z<-cbind(z,y)
       }
       return(z)
 }
 
 
-## Compute the values for defined matrices
+### Compute the values for defined matrices
 
 for(yr in period) {
+
       icio <- read.csv(paste0(excel,"OECD_ICIO_",yr,".csv"))
       icio <- data.matrix(icio[,2:size(icio)[2]])
       
@@ -89,7 +87,7 @@ for(yr in period) {
             for (j in 1:S) {
                   rnum <- table(id[2,(cnum+1):(cnum+nind)])[j]    # rnum = Number of repetition of row
                   if (j==1) mat<-t(eye(S)[j,])%x%ones(rnum,1) else mat<-rbind(mat,t(eye(S)[j,])%x%ones(rnum,1))
-            }
+            }                                                     # mat = post-adjust matrix
             FDD.i <- fdd_i(FD[(cnum+1):(cnum+nind),], mat)        # FDD = Partial diagonalization of Final Demand
             if (i==1) FDD <- FDD.i else FDD <- rbind(FDD, FDD.i)
 

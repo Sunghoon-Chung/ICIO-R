@@ -17,20 +17,29 @@ period <- c(1995,2000,2005,2008,2009,2010,2011)       # Sample Period
 cty.src <- "CHN"                                      # Source country should be a single country
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
+load(paste0(rdata,"ICIO_iid3d_classfication.RData"))  # load iid3d industry classification
 sectors <- c("ndura","dura","ucon","svc","all")       # Sectors are classified based on durables vs. non-durables
 vars    <- c("y","va","mx","fx","ex")           
 
 
+
 # Prepare an excel output file
 
-eps.j.yr <- list()      # a List to save calculated elasticities by responding country & year
-
-note <- c("This file calculates the elasticities of output (y), value added (va), intermediate export (mx), final export (fx) and export (ex) to the real FD change in ",cty.src,". All units are in percentage term.")
+note <- c(paste0("(1) This file calculates the elasticities of output (y), value added (va), intermediate export (mx), final export (fx) and export (ex) to the real FD change in ",cty.src,"."),
+          "(2) All units are in percentage term.", 
+          "(3) 34 original industries in the ICIO table are aggregated to 20 industries as below.",
+          "(4) Durable = 22x, Non-durable = 10x & 21x, Utility & Construction = 31x, Service = 32x")
 
 wb <- createWorkbook()
 addWorksheet(wb, "Note")
 writeData(wb, "Note", note)
-filename <- paste0("FD_elasticty_to_",cty.src,".xlsx")
+writeDataTable(wb, "Note", data.frame(iid, iid.eng, iid.kr), startRow=5, withFilter=FALSE)
+filename <- paste0("FD_elasticty_to_",cty.src,"_by_iid3d.xlsx")
+
+
+
+# Prepare a List to save calculated elasticities by responding country & year
+eps.j.yr <- list()      
 
 
 
@@ -39,7 +48,7 @@ filename <- paste0("FD_elasticty_to_",cty.src,".xlsx")
 for (yr in period) {
       
       # Load file
-      load(paste0(rdata,"ICIO_matrix_",yr,".RData"))    # These RData include all necessary data for analysis
+      load(paste0(rdata,"ICIO_iid3d_matrix_",yr,".RData"))    # These RData include all necessary data for analysis
       rm(icio)
       
 
@@ -50,12 +59,13 @@ for (yr in period) {
       
       
       # Sector Classification: nonondurable, durable, utilies & construction, service
-      FD.sector <- zeros(S, length(sectors))
-      FD.sector[c(1:9,18),1] <- 1      # Non-durable
-      FD.sector[c(10:17) ,2] <- 1      # Durable
-      FD.sector[c(19,20) ,3] <- 1      # Utilities & Construction
-      FD.sector[c(21:34) ,4] <- 1      # Service
-      FD.sector[,5]          <- 1      # All Industries
+      FD.sector <- zeros(20,length(sectors))
+      colnames(FD.sector) <- sectors
+      FD.sector[,1] <- ifelse(as.integer(iid/10)<=21, 1, 0)      # Non-durable
+      FD.sector[,2] <- ifelse(as.integer(iid/10)==22, 1, 0)      # Durable
+      FD.sector[,3] <- ifelse(as.integer(iid/10)==31, 1, 0)      # Utilities & Construction
+      FD.sector[,4] <- ifelse(as.integer(iid/10)==32, 1, 0)      # Service
+      FD.sector[,5] <- 1      # All Industries
       
       FD.growth <- as.data.frame(zeros(SN.np, length(sectors)))
       dimnames(FD.growth) <- list(ciid.np, sectors)
@@ -69,7 +79,7 @@ for (yr in period) {
       
       yInv <- zeros(SN,1)
       names(yInv) <- ciid
-      yInv[ciid.nzero] <- 1/y.nzero
+      yInv <- 1/y
       OS <- diag(yInv) %*% Y.alloc                  # OS = Output Share Matrix (S matrix in Bems et al. 2010)
       dimnames(OS) <- list(ciid, ciid.np)
       
@@ -78,7 +88,7 @@ for (yr in period) {
       
       vaInv <- zeros(SN,1)
       names(vaInv) <- ciid
-      vaInv[ciid.nzero] <- 1/va.nzero
+      vaInv <- 1/va
       VAS <- diag(vaInv) %*% VA.alloc               # VAS = Value-added Share Matrix
       dimnames(VAS) <- list(ciid, ciid.np)
       
