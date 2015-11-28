@@ -5,6 +5,7 @@ setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
 excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
 rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
+library(openxlsx)
 library(matlab)
 library(stringr)
 
@@ -30,9 +31,10 @@ irow.old <- str_sub(id.old[2,],-3,-1)            # irow.old = country-matched in
 irow.old.list <- sapply(iid.old, function(i) which(irow.old==i)) # list of original 34 industries' row positions
 
 
-# Import new classification file
-iid.class <- as.matrix(read.xlsx(paste0(excel,"ICIO_ciid.xlsx"), "ind_class"))
-iid.new <- iid.class[,"post"]                    # new classification to apply
+# Import new classification file to apply
+iclass  <- "iid3d"
+iid.class <- as.matrix(read.xlsx(paste0(excel,"ICIO_ciid_classification.xlsx"), iclass))
+iid.new <- iid.class[,"post"]                    
 iid     <- as.numeric(unique(iid.new))           # the new iid to use
 iid.eng <- unique(iid.class[,"ename"])
 iid.kr  <- unique(iid.class[,"kname"])
@@ -70,8 +72,8 @@ colnames(id) <- ciid
 
 
 # Save meta data & remove some noisy data
-save(iid, iid.eng, iid.kr, file=paste0(rdata,"ICIO_iid3d_classfication.RData"))  # Save industry classification data
-rm(irow.old, irow.old.list, iid.class, irow.new, ciid.new.list)                  # remove noisy data
+save(iclass,cid,cid.np,ciid,ciid.np,iid,iid.eng,iid.kr, file=paste0(rdata,"ICIO_",iclass,"_meta.RData")) 
+rm(irow.old, irow.old.list, iid.class, irow.new, ciid.new.list)  # remove noisy data
 
 
 
@@ -152,8 +154,8 @@ for(yr in period) {
       dimnames(IDD) <- list(ciid, ciid.np)
       
       # Save objects
-      save(icio,S,N,N.np,SN,SN.np,id,cid,cid.np,iid,iid.kr,iid.eng,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,IDD,MX,FX, 
-           file=paste0(rdata,"ICIO_iid3d_matrix_",yr,".RData"))
+      save(icio,S,N,N.np,SN,SN.np,id,cid,cid.np,iclass,iid,iid.kr,iid.eng,ciid,ciid.np,M,A,y,va,r,LeonInv,FD,FDD,IDD,MX,FX, 
+           file=paste0(rdata,"ICIO_",iclass,"_matrix_",yr,".RData"))
       
 }
 

@@ -17,7 +17,8 @@ period <- c(1995,2000,2005,2008,2009,2010,2011)       # Sample Period
 cty.src <- "CHN"                                      # Source country should be a single country
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
-load(paste0(rdata,"ICIO_iid3d_classfication.RData"))  # load iid3d industry classification
+iclass <- "iid3d"                                     # Industry classification to apply
+load(paste0(rdata,"ICIO_",iclass,"_meta.RData"))      # load industry classification meta data
 sectors <- c("ndura","dura","ucon","svc","all")       # Sectors are classified based on durables vs. non-durables
 vars    <- c("y","va","mx","fx","ex")           
 
@@ -34,7 +35,7 @@ wb <- createWorkbook()
 addWorksheet(wb, "Note")
 writeData(wb, "Note", note)
 writeDataTable(wb, "Note", data.frame(iid, iid.eng, iid.kr), startRow=5, withFilter=FALSE)
-filename <- paste0("FD_elasticty_to_",cty.src,"_by_iid3d.xlsx")
+filename <- paste0("FD_elasticity_",iclass,"_",cty.src,".xlsx")
 
 
 
