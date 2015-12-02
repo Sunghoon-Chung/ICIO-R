@@ -10,7 +10,7 @@ library(openxlsx)
 
 ### Step 1. 
 
-period <- c(2008,2009,2010,2011)   # Sample Period
+period <- c(2008,2009,2010,2011)   # Sample Period should cover from the base-years to the years of interest
 
 for (yr in period) {
       load(paste0(rdata,"ICIO_iid3d_matrix_",yr,".RData"))    # These RData include all necessary data for analysis
@@ -22,7 +22,10 @@ write.dta(as.data.frame(FD.allyr), "D:/Copy/GVC/ICIO/Stata/FD_by_cid.dta", conve
 
 
 
-### Step 2. run do file
+### Step 2. run the folloiwng do files
+
+# If you need to re-estimate the growth rate of FD in CHN, KOR or USA, run FD_estimation_XXX.do
+# Then, run FDhat_World_PWT.do
 
 
 
@@ -33,6 +36,8 @@ setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
 excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
 rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
+library(foreign)
+library(openxlsx)
 
 period <- c(2008,2009,2010)  # Sample Period should be the base-years to use
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
@@ -48,7 +53,7 @@ vars   <- c("y","va","mx","fx","ex")
 d.year <- paste0(period[2]-period[1], "-year") 
 FDhat <- read.dta("D:/Copy/GVC/ICIO/Stata/FDhat_World.dta")
 ciid.ord <- FDhat[,1]    # ciid row position
-FDhat <- FDhat[,2:4]
+FDhat <- FDhat[,2:(2+length(period)-1)]
 rownames(FDhat) <- ciid.ord
 FDhat <- FDhat[ciid.np,] # change order of ciid according to ICIO Table
 
@@ -178,7 +183,7 @@ for (yr in period) {
       vahat <- as.data.frame(vahat)
       mxhat <- as.data.frame(mxhat)      
       fxhat <- as.data.frame(fxhat)
-      exhat <- mxhat + fxhat                                # exhat = Total Export growth
+      exhat <- mx/ex*mxhat + fx/ex*fxhat                    # exhat = Total Export growth
       
       yhat.j  <- lapply(cty.rsp, function(j) yhat[rcty.row[[j]],])  # yhat.j = Sector-level Output growth for country j
       vahat.j <- lapply(cty.rsp, function(j) vahat[rcty.row[[j]],])

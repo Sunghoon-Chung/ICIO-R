@@ -14,7 +14,7 @@ library(openxlsx)
 # Assign Sample period, Source Country, Responding Countries, Sector classification, and Variables of interest
 
 period <- c(1995,2000,2005,2008,2009,2010,2011)       # Sample Period
-cty.src <- "CHN"                                      # Source country should be a single country
+cty.src <- "USA"                                      # Source country should be a single country
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
 iclass <- "iid3d"                                     # Industry classification to apply
@@ -129,7 +129,7 @@ for (yr in period) {
       ### Calculating Elasticity by Broad Sectors & Countries ###
       
       # Country-by-Sector level Growth Rate
-      yhat  <- lapply(FD.growth, function(x) OS %*% x)      # yhat (SN by # of sectors) = Output growth by ciid
+      yhat  <- lapply(FD.growth, function(x) OS %*% x)      # yhat (SN by # of broad sectors) = Output growth by ciid
       vahat <- lapply(FD.growth, function(x) VAS %*% x)     # vahat = VA growth
       mxhat <- lapply(yhat,      function(x) MXS %*% x)     # mxhat = intermediate export growth
       fxhat <- lapply(FD.growth, function(y) FXS %*% y)     # fxhat = final export growth
@@ -138,7 +138,7 @@ for (yr in period) {
       vahat <- as.data.frame(vahat)
       mxhat <- as.data.frame(mxhat)      
       fxhat <- as.data.frame(fxhat)
-      exhat <- mxhat + fxhat                                # exhat = Total Export growth
+      exhat <- mx/ex*mxhat + fx/ex*fxhat                    # exhat = Total Export growth
       
       yhat.j  <- lapply(cty.rsp, function(j) yhat[rcty.row[[j]],])  # yhat.j = Sector-level Output growth for country j
       vahat.j <- lapply(cty.rsp, function(j) vahat[rcty.row[[j]],])

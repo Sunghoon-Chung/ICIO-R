@@ -130,7 +130,7 @@ for (yr in period) {
       vahat <- as.data.frame(vahat)
       mxhat <- as.data.frame(mxhat)      
       fxhat <- as.data.frame(fxhat)
-      exhat <- mxhat + fxhat                                # exhat = Total Export growth
+      exhat <- mx/ex*mxhat + fx/ex*fxhat                    # exhat = Total Export growth
       
       yhat.j  <- lapply(cty.rsp, function(j) yhat[rcty.row[[j]],])  # yhat.j = Sector-level Output growth for country j
       vahat.j <- lapply(cty.rsp, function(j) vahat[rcty.row[[j]],])

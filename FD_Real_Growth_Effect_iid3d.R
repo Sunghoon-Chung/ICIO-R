@@ -14,8 +14,8 @@ library(openxlsx)
 
 # Sample period, Source Country, Responding Countries, Sector classification, and Variables of interest
 
-period <- c(2008,2009,2010)  # Sample Period should be the base-years to use
-cty.src <- "KOR"                                      # Source country should be a single country
+period <- c(2008,2009,2010,2011,2012,2013)  # Sample Period should be the base-years to use
+cty.src <- "CHN"                                      # Source country should be a single country
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
 iclass <- "iid3d"                                     # Industry classification to apply
@@ -158,7 +158,7 @@ for (yr in period) {
       vahat <- as.data.frame(vahat)
       mxhat <- as.data.frame(mxhat)      
       fxhat <- as.data.frame(fxhat)
-      exhat <- mxhat + fxhat                                # exhat = Total Export growth
+      exhat <- mx/ex*mxhat + fx/ex*fxhat                    # exhat = Total Export growth
       
       yhat.j  <- lapply(cty.rsp, function(j) yhat[rcty.row[[j]],])  # yhat.j = Sector-level Output growth for country j
       vahat.j <- lapply(cty.rsp, function(j) vahat[rcty.row[[j]],])
