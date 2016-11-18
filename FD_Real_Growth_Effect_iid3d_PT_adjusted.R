@@ -1,9 +1,9 @@
 
 
 rm(list = ls())                        # Remove all
-setwd("c:/Copy/GVC/ICIO/Rcode")        # Working Directory
-excel <- "c:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
-rdata <- "c:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
+setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
+excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
+rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
 
 library(matlab)
 library(openxlsx)
@@ -16,7 +16,6 @@ library(openxlsx)
 
 period <- c(2008,2009,2010,2011,2012,2013)  # Sample Period should be the base-years to use
 cty.src <- "CHN"                                      # Source country should be CHINA!!
-dom.ratio <- 0.2                                      # Percentage increase in domestic input ratio in China
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
 iclass <- "iid3d"                                     # Industry classification to apply
@@ -62,15 +61,15 @@ eps.j.yr <- list()
 for (yr in period) {
       
       # Load file
-      if (yr>2011) load(paste0(rdata,"ICIO_",iclass,"_matrix_2011.RData"))
-      else load(paste0(rdata,"ICIO_",iclass,"_matrix_",yr,".RData")) # These RData include all necessary data for analysis
+      load(paste0(rdata,"ICIO_iid3d_matrix_2011_PT_adjusted.RData")) # These RData include all necessary data for analysis
       rm(icio)
 
       
       # Row positions of Source Country & Responding Countries in ICIO matrix
-      scty.row <- which(substr(ciid.np, 1, 3) == cty.src)         # Source country's row position in FD
-      scty.row.A <- which(substr(ciid, 1, 3) == cty.src)          # Source country's row position in A
-      scty.col.A <- which(substr(ciid, 1, 7) == "CHN.PRO")        # Source country's column position in A
+      scty.row <- which(substr(ciid.np, 1, 3) == cty.src)       # Source country's row position in FD
+      scty.row.A <- which(substr(ciid, 1, 3) == cty.src)        # Source country's row position in A
+      CHN.PRO <- which(substr(ciid, 1, 7) == "CHN.PRO")         # CHN.PRO's position
+      CHN.NPR <- which(substr(ciid, 1, 7) == "CHN.NPR")         # CHN.NPR's position
       names(cty.rsp) <- cty.rsp
       rcty.row <- lapply(cty.rsp, function(cty) which(substr(ciid,1,3)==cty)) # Responding countries' row position
       
@@ -92,36 +91,12 @@ for (yr in period) {
       FD.growth[scty.row,] <- FD.sector
       
       
-      ## Adjust Process Trade Structure in China ==> change A & LeonInv matrices
 
-      # Adjust intermediate input structure in Chinese Process Trading sectors
-      A[-scty.row.A, scty.col.A] <- A[-scty.row.A, scty.col.A] * 0.8
-#       A.incre.CHN <- colSums(A[scty.row.A, scty.col.A]) * dom.ratio  # Vector length = # of PT sectors in CHN
-#       A[scty.row.A, scty.col.A] <- A[scty.row.A, scty.col.A] * (1+dom.ratio)
-
-#       A.csum.KOR <- colSums(A[rcty.row$KOR, scty.col.A])
-#       A.wt.KOR   <- A[rcty.row$KOR, scty.col.A] %*% diag(1/A.csum.KOR)
-#       A[rcty.row$KOR, scty.col.A] <- A[rcty.row$KOR, scty.col.A] - (A.wt.KOR %*% diag(A.incre.CHN))
-      
-#       A.csum.ROW <- colSums(A[-scty.row.A, scty.col.A])
-#       A.wt.ROW   <- A[-scty.row.A, scty.col.A] %*% diag(1/A.csum.ROW)  # weight
-#       A[-scty.row.A, scty.col.A] <- A[-scty.row.A, scty.col.A] - (A.wt.ROW %*% diag(A.incre.CHN)) 
-      
-      Leon <- diag(length(ciid)) - A
-      LeonInv <- solve(Leon) 
-      
-      # Adjust final demand structure for Chinese Process Trading sectors
-      #FDD.row.CHN.dom <- which(substr(ciid,1,7)=="CHN.DOM")
-      #FDD.row.CHN.npr <- which(substr(ciid,1,7)=="CHN.npr")
-      #FDD.decre.CHN.PRO <- FDD[scty.col.A, ] * (1-dom.ratio)
-
-      
       ## Obtain Output & Value-added Share Matrix
       
       Y.alloc <- LeonInv %*% FDD                    # Y.alloc = Output Allocation Matrix
       dimnames(Y.alloc) <- list(ciid, ciid.np)      # FDD = Final Demand Diagonalized Matrix
-      #yrowsum <- rowSums(Y.alloc)                   # yrowsum should be equal to y unless y is adjusted somehow.
-      
+
       yInv <- zeros(SN,1)
       names(yInv) <- ciid
       yInv <- 1/y
@@ -168,8 +143,7 @@ for (yr in period) {
       #       IM  <- ones(SN,1) %*% t(rep(im.cid, freq.cid))          # IM = Total Import by cid in Matrix form
       #       MMS <- MX / IM                                          # Intermediate Import Share
       #       FMS <- FX / (ones(SN,1) %*% im.cid)                     # Final Import Share
-      
-      
+
       
       
       ### Calculating Elasticity by Broad Sectors & Countries ###

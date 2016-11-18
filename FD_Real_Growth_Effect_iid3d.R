@@ -120,13 +120,13 @@ for (yr in period) {
       fx[fx==0] <- 0.01
       ex  <- mx + fx          # ex = Total Export by ciid
       
-      MXS <- MX / ex          # MXS = Intermediate Export Share
+      MXS <- MX / mx          # MXS = Intermediate Export Share
       FX.diag <- NULL         # FX.diag = Final Export diagonalized matrix
       for (n in c(1:N.np)) {
             FX.n    <- diag(FX[,n]) %*% IDD[,1:S]
             FX.diag <- cbind(FX.diag, FX.n)
       }
-      FXS <- FX.diag / ex     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
+      FXS <- FX.diag / fx     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
       
       
       # We only calculate country-level import

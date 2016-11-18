@@ -35,9 +35,11 @@ rm(list = ls())
 setwd("D:/Copy/GVC/ICIO/Rcode")        # Working Directory
 excel <- "D:/Copy/GVC/ICIO/Excel/"     # Excel Raw data Directory
 rdata <- "D:/Copy/GVC/ICIO/Rdata/"     # RData Saving Directory
+stata <- "D:/Copy/GVC/ICIO/Stata/"     # Dta data Directory
 
 library(foreign)
 library(openxlsx)
+library(matlab)
 
 period <- c(2008,2009,2010)  # Sample Period should be the base-years to use
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
@@ -51,7 +53,7 @@ vars   <- c("y","va","mx","fx","ex")
 ## Import estimate of FD Growth rate
 
 d.year <- paste0(period[2]-period[1], "-year") 
-FDhat <- read.dta("D:/Copy/GVC/ICIO/Stata/FDhat_World.dta")
+FDhat <- read.dta(paste0(stata,"FDhat_World.dta"))
 ciid.ord <- FDhat[,1]    # ciid row position
 FDhat <- FDhat[,2:(2+length(period)-1)]
 rownames(FDhat) <- ciid.ord
@@ -107,7 +109,7 @@ for (yr in period) {
       # Row positions of Source Country & Responding Countries in ICIO matrix
       names(cty.rsp) <- cty.rsp
       rcty.row <- lapply(cty.rsp, function(cty) which(substr(ciid,1,3)==cty)) # Responding countries' row position
-      
+
       
       ## Insert sector-level FD growth rate
       
@@ -145,13 +147,13 @@ for (yr in period) {
       fx[fx==0] <- 0.01
       ex  <- mx + fx          # ex = Total Export by ciid
       
-      MXS <- MX / ex          # MXS = Intermediate Export Share
+      MXS <- MX / mx          # MXS = Intermediate Export Share
       FX.diag <- NULL         # FX.diag = Final Export diagonalized matrix
       for (n in c(1:N.np)) {
             FX.n    <- diag(FX[,n]) %*% IDD[,1:S]
             FX.diag <- cbind(FX.diag, FX.n)
       }
-      FXS <- FX.diag / ex     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
+      FXS <- FX.diag / fx     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
       
       
       # We only calculate country-level import
@@ -230,7 +232,7 @@ for (yr in period) {
 }
 
 
-# Convert eps.j.yr to dataframe for each country and save the resutls to the xlsx file
+# Convert eps.j.yr to dataframe for each country and save the results to the xlsx file
 
 names(eps.j.yr) <- cty.rsp
 eps.colname <- c("year", "ciid", paste0("gr_",vars,"_all"))

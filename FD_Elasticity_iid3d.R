@@ -14,7 +14,7 @@ library(openxlsx)
 # Assign Sample period, Source Country, Responding Countries, Sector classification, and Variables of interest
 
 period <- c(1995,2000,2005,2008,2009,2010,2011)       # Sample Period
-cty.src <- "USA"                                      # Source country should be a single country
+cty.src <- "CHN"                                      # Source country should be a single country
 cty.rsp <- list("KOR","CHN","DEU","JPN","TWN","USA")  # For other countries, choose them together in this list
 
 iclass <- "iid3d"                                     # Industry classification to apply
@@ -102,14 +102,14 @@ for (yr in period) {
       fx[fx==0] <- 0.01
       ex  <- mx + fx          # ex = Total Export by ciid
 
-      MXS <- MX / ex          # MXS = Intermediate Export Share
+      MXS <- MX / mx          # MXS = Intermediate Export Share
       FX.diag <- NULL         # FX.diag = Final Export diagonalized matrix
       for (n in c(1:N.np)) {
             FX.n    <- diag(FX[,n]) %*% IDD[,1:S]
             FX.diag <- cbind(FX.diag, FX.n)
       }
-      FXS <- FX.diag / ex     # FXS = Final Export Share (sum(MXS[i,])+sum(FXS[i,]) = 1 for all i)
-      
+      FXS <- FX.diag / fx     # FXS = Final Export Share
+
       
       # We only calculate country-level import
 #       cols   <- list()
@@ -132,7 +132,7 @@ for (yr in period) {
       yhat  <- lapply(FD.growth, function(x) OS %*% x)      # yhat (SN by # of broad sectors) = Output growth by ciid
       vahat <- lapply(FD.growth, function(x) VAS %*% x)     # vahat = VA growth
       mxhat <- lapply(yhat,      function(x) MXS %*% x)     # mxhat = intermediate export growth
-      fxhat <- lapply(FD.growth, function(y) FXS %*% y)     # fxhat = final export growth
+      fxhat <- lapply(FD.growth, function(x) FXS %*% x)     # fxhat = final export growth
 
       yhat  <- as.data.frame(yhat)
       vahat <- as.data.frame(vahat)
